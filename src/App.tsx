@@ -31,7 +31,7 @@ interface ExtractedData {
   Goods_Services: string;
 }
 
-const COLUMNS = [
+const COLUMNS: Array<keyof ExtractedData> = [
   "Name", "Item_Online_DisplayName", "Variation_Name", "Price", 
   "Category", "Category_Online_DisplayName", "Short_Code", 
   "Short_Code_2", "Description", "Attributes", "Goods_Services"
@@ -204,7 +204,13 @@ export default function App() {
   };
 
   const downloadCSV = () => {
-    const csv = Papa.unparse(data);
+    const orderedRows = data.map((row) =>
+      COLUMNS.reduce((acc, col) => {
+        acc[col] = row[col] || '';
+        return acc;
+      }, {} as ExtractedData)
+    );
+    const csv = Papa.unparse(orderedRows, { columns: COLUMNS as string[] });
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -318,7 +324,7 @@ export default function App() {
                   <tr className="bg-zinc-50/50 border-b border-zinc-100">
                     {COLUMNS.map(col => (
                       <th key={col} className="px-4 py-3 text-[10px] font-bold text-zinc-400 uppercase tracking-wider whitespace-nowrap">
-                        {col.replace(/_/g, ' ')}
+                        {col}
                       </th>
                     ))}
                   </tr>

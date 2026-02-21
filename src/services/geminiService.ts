@@ -1,5 +1,21 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
+const COLUMNS = [
+  "Name",
+  "Item_Online_DisplayName",
+  "Variation_Name",
+  "Price",
+  "Category",
+  "Category_Online_DisplayName",
+  "Short_Code",
+  "Short_Code_2",
+  "Description",
+  "Attributes",
+  "Goods_Services",
+] as const;
+
+type ExtractedRow = Record<(typeof COLUMNS)[number], string>;
+
 const COLUMN_SCHEMA = {
   type: Type.ARRAY,
   items: {
@@ -70,6 +86,10 @@ export async function extractDataFromFiles(files: File[]) {
                  - If these standalone items have portion sizes (Half/Full), then apply Rule 1 to that specific item.
                  - Example: "Veg Steam Momos" (Parent, Price 0) -> "Veg Steam Momos" (Child, Variation: Half, Price: 60) -> "Veg Steam Momos" (Child, Variation: Full, Price: 100).
               3. If an item has no variations, just create a single row with its actual price.
+
+              ORDERING RULE:
+              - Preserve the original top-to-bottom line sequence from the source document.
+              - Do not sort or regroup rows.
               
               MAPPING INTELLIGENCE:
               - 'Name' is the primary product/service name.
@@ -88,7 +108,13 @@ export async function extractDataFromFiles(files: File[]) {
 
     try {
       const parsed = JSON.parse(response.text || "[]");
-      results.push(...parsed);
+      const normalizedRows = (Array.isArray(parsed) ? parsed : []).map((row: any) =>
+        COLUMNS.reduce((acc, col) => {
+          acc[col] = row?.[col] != null ? String(row[col]) : "";
+          return acc;
+        }, {} as ExtractedRow)
+      );
+      results.push(...normalizedRows);
     } catch (e) {
       console.error("Failed to parse Gemini response", e);
     }
