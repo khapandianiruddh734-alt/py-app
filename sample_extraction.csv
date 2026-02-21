@@ -1,0 +1,5 @@
+Name,Item_Online_DisplayName,Variation_Name,Price,Category,Category_Online_DisplayName,Short_Code,Short_Code_2,Description,Attributes,Goods_Services
+"Classic T-Shirt","Classic T-Shirt","","0","Apparel","Clothing","TS-001","","Base product for variations","","Goods"
+"Classic T-Shirt","Classic T-Shirt","Small","$15.00","Apparel","Clothing","TS-001-S","","Small size variation","Size: Small","Goods"
+"Classic T-Shirt","Classic T-Shirt","Large","$18.00","Apparel","Clothing","TS-001-L","","Large size variation","Size: Large","Goods"
+"Consultation Fee","Consultation Fee","","$150.00","Services","Professional","","","One hour consultation","","Services"
