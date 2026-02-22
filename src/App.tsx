@@ -4,17 +4,13 @@ import {
   Upload, 
   FileText, 
   Download, 
-  Trash2, 
   Loader2, 
   Table as TableIcon, 
-  Code,
-  CheckCircle2,
   AlertCircle,
-  FileSpreadsheet,
   RefreshCw
 } from 'lucide-react';
 import Papa from 'papaparse';
-import { extractDataFromFiles } from './services/geminiService';
+import { extractDataFromFiles, type ExtractionLanguage, type OutputMode } from './services/geminiService';
 import { cn } from './lib/utils';
 
 interface ExtractedData {
@@ -31,147 +27,19 @@ interface ExtractedData {
   Goods_Services: string;
 }
 
-const COLUMNS = [
+const COLUMNS: Array<keyof ExtractedData> = [
   "Name", "Item_Online_DisplayName", "Variation_Name", "Price", 
   "Category", "Category_Online_DisplayName", "Short_Code", 
   "Short_Code_2", "Description", "Attributes", "Goods_Services"
 ];
 
-const PYTHON_CODE = `import os
-import re
-import pandas as pd
-import pytesseract
-import pdfplumber
-from PIL import Image
-from datetime import datetime
-
-# Requirements: pip install pytesseract pdfplumber pandas Pillow
-# Note: You must have Tesseract OCR installed on your system.
-
-class DocExtractor:
-    def __init__(self):
-        self.columns = [
-            "Name", "Item_Online_DisplayName", "Variation_Name", "Price", 
-            "Category", "Category_Online_DisplayName", "Short_Code", 
-            "Short_Code_2", "Description", "Attributes", "Goods_Services"
-        ]
-        
-    def extract_from_pdf(self, pdf_path):
-        text = ""
-        with pdfplumber.open(pdf_path) as pdf:
-            for page in pdf.pages:
-                text += page.extract_text() or ""
-        return text
-
-    def extract_from_image(self, img_path):
-        return pytesseract.image_to_string(Image.open(img_path))
-
-    def parse_text(self, text):
-        data = []
-        lines = [l.strip() for l in text.split('\\n') if l.strip()]
-        price_pattern = r'(\$?\\s?\\d+[.,]\\d{2})'
-        variation_keywords = ['small', 'medium', 'large', 'xl', 'red', 'blue', 'green', 'black', 'white', 'half', 'full']
-        dietary_keywords = ['veg', 'non-veg', 'egg', 'chicken', 'paneer', 'mutton', 'fish', 'prawns', 'soya']
-        temp_items = {} 
-
-        for i, line in enumerate(lines):
-            price_match = re.search(price_pattern, line)
-            if price_match:
-                price = price_match.group(1).strip()
-                remaining_text = line.replace(price, "").strip()
-                
-                dietary_prefix = ""
-                for diet in dietary_keywords:
-                    if re.search(rf'\\b{diet}\\b', remaining_text, re.IGNORECASE):
-                        dietary_prefix = diet.capitalize()
-                        break
-
-                found_var = ""
-                for var in variation_keywords:
-                    if re.search(rf'\\b{var}\\b', remaining_text, re.IGNORECASE):
-                        found_var = var.capitalize()
-                        remaining_text = re.sub(rf'\\b{var}\\b', '', remaining_text, flags=re.IGNORECASE).strip()
-                        break
-                
-                base_name = remaining_text.strip(', ').strip()
-                if not base_name and i > 0:
-                    prev_line = lines[i-1]
-                    if not re.search(price_pattern, prev_line):
-                        base_name = prev_line[:50]
-                
-                if base_name:
-                    if dietary_prefix:
-                        if dietary_prefix.lower() not in base_name.lower():
-                            base_name = f"{dietary_prefix} {base_name}"
-                    if base_name not in temp_items: temp_items[base_name] = []
-                    temp_items[base_name].append({"variation": found_var, "price": price, "line": line})
-
-        for base_name, variations in temp_items.items():
-            if len(variations) > 1:
-                parent = {col: "" for col in self.columns}
-                parent["Name"] = base_name
-                parent["Item_Online_DisplayName"] = base_name
-                parent["Price"] = "0"
-                parent["Goods_Services"] = "Goods"
-                data.append(parent)
-                for v in variations:
-                    child = {col: "" for col in self.columns}
-                    child["Name"] = base_name
-                    child["Item_Online_DisplayName"] = base_name
-                    child["Variation_Name"] = v["variation"]
-                    child["Price"] = v["price"]
-                    child["Description"] = v["line"]
-                    child["Goods_Services"] = "Goods"
-                    data.append(child)
-            else:
-                v = variations[0]
-                row = {col: "" for col in self.columns}
-                row["Name"] = base_name
-                row["Item_Online_DisplayName"] = base_name
-                row["Variation_Name"] = v["variation"]
-                row["Price"] = v["price"]
-                row["Description"] = v["line"]
-                row["Goods_Services"] = "Goods"
-                data.append(row)
-        return data
-
-    def process_file(self, file_path):
-        ext = os.path.splitext(file_path)[1].lower()
-        try:
-            if ext == '.pdf':
-                text = self.extract_from_pdf(file_path)
-            elif ext in ['.jpg', '.jpeg', '.png']:
-                text = self.extract_from_image(file_path)
-            else:
-                return f"Unsupported format: {ext}"
-            
-            parsed_data = self.parse_text(text)
-            if not parsed_data:
-                return "No data identified."
-                
-            df = pd.DataFrame(parsed_data, columns=self.columns)
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_name = f"extracted_data_{timestamp}.csv"
-            df.to_csv(output_name, index=False)
-            return f"Success! Saved to {output_name}"
-        except Exception as e:
-            return f"Error: {str(e)}"
-
-if __name__ == "__main__":
-    import sys
-    if len(sys.argv) < 2:
-        print("Usage: python extractor.py <file_path>")
-    else:
-        extractor = DocExtractor()
-        print(extractor.process_file(sys.argv[1]))
-`;
-
 export default function App() {
   const [files, setFiles] = useState<File[]>([]);
   const [data, setData] = useState<ExtractedData[]>([]);
   const [isExtracting, setIsExtracting] = useState(false);
-  const [activeTab, setActiveTab] = useState<'extract' | 'python'>('extract');
   const [error, setError] = useState<string | null>(null);
+  const [language, setLanguage] = useState<ExtractionLanguage>('auto');
+  const [outputMode, setOutputMode] = useState<OutputMode>('structured');
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     setFiles(prev => [...prev, ...acceptedFiles]);
@@ -192,7 +60,7 @@ export default function App() {
     setIsExtracting(true);
     setError(null);
     try {
-      const results = await extractDataFromFiles(files);
+      const results = await extractDataFromFiles(files, { language, outputMode });
       setData(prev => [...prev, ...results]);
       setFiles([]);
     } catch (err) {
@@ -204,7 +72,13 @@ export default function App() {
   };
 
   const downloadCSV = () => {
-    const csv = Papa.unparse(data);
+    const orderedRows = data.map((row) =>
+      COLUMNS.reduce((acc, col) => {
+        acc[col] = row[col] || '';
+        return acc;
+      }, {} as ExtractedData)
+    );
+    const csv = Papa.unparse(orderedRows, { columns: COLUMNS as string[] });
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -269,6 +143,45 @@ export default function App() {
               </div>
             )}
 
+            <div className="mt-6 w-full max-w-2xl grid grid-cols-1 md:grid-cols-2 gap-3">
+              <label className="text-xs font-medium text-zinc-600">
+                OCR / Language
+                <select
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value as ExtractionLanguage)}
+                  className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                >
+                  <option value="auto">Auto Detect</option>
+                  <option value="english">English</option>
+                  <option value="hindi">Hindi</option>
+                  <option value="arabic">Arabic</option>
+                  <option value="urdu">Urdu</option>
+                  <option value="bengali">Bengali</option>
+                  <option value="tamil">Tamil</option>
+                  <option value="telugu">Telugu</option>
+                  <option value="marathi">Marathi</option>
+                  <option value="gujarati">Gujarati</option>
+                  <option value="punjabi">Punjabi</option>
+                  <option value="malayalam">Malayalam</option>
+                  <option value="kannada">Kannada</option>
+                  <option value="french">French</option>
+                  <option value="spanish">Spanish</option>
+                </select>
+              </label>
+
+              <label className="text-xs font-medium text-zinc-600">
+                Output Format
+                <select
+                  value={outputMode}
+                  onChange={(e) => setOutputMode(e.target.value as OutputMode)}
+                  className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                >
+                  <option value="structured">Structured</option>
+                  <option value="original">Original</option>
+                </select>
+              </label>
+            </div>
+
             <div className="mt-10">
               <button 
                 onClick={handleExtract}
@@ -318,7 +231,7 @@ export default function App() {
                   <tr className="bg-zinc-50/50 border-b border-zinc-100">
                     {COLUMNS.map(col => (
                       <th key={col} className="px-4 py-3 text-[10px] font-bold text-zinc-400 uppercase tracking-wider whitespace-nowrap">
-                        {col.replace(/_/g, ' ')}
+                        {col}
                       </th>
                     ))}
                   </tr>

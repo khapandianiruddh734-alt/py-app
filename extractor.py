@@ -115,7 +115,7 @@ class DocExtractor:
                 parent["Name"] = base_name
                 parent["Item_Online_DisplayName"] = base_name
                 parent["Price"] = "0"
-                parent["Goods_Services"] = "Goods"
+                parent["Goods_Services"] = "Services"
                 data.append(parent)
                 
                 # Create CHILD rows
@@ -126,7 +126,7 @@ class DocExtractor:
                     child["Variation_Name"] = v["variation"]
                     child["Price"] = v["price"]
                     child["Description"] = v["line"]
-                    child["Goods_Services"] = "Goods"
+                    child["Goods_Services"] = "Services"
                     data.append(child)
             else:
                 # Single item, no parent needed
@@ -137,7 +137,7 @@ class DocExtractor:
                 row["Variation_Name"] = v["variation"]
                 row["Price"] = v["price"]
                 row["Description"] = v["line"]
-                row["Goods_Services"] = "Goods"
+                row["Goods_Services"] = "Services"
                 data.append(row)
                 
         return data
