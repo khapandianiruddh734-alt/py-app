@@ -136,6 +136,7 @@ ORIGINAL OUTPUT MODE:
 - Keep each extracted source line as close as possible in Description.
 - If a field is missing, return an empty string.
 - Make sure to assign proper attributes to the items, specifically ensuring 'veg', 'non-veg', and 'egg' attributes are added.
+- If you add an attribute, include only ONE attribute value in the Attributes column.
 - Always put 'Services' in the Goods_Services column for all items.
 - Make sure that do not make any changes in the existing code (Short_Code / Short_Code_2).
 - If dietary terms (Veg, Non-Veg, Chicken, Paneer, Prawns, Egg, etc.) are given as options/variations, prefix the Name with that term (e.g., "Veg Manchurian", "Chicken Momos"). Do not reorder existing names unless adding that prefix.
@@ -187,6 +188,7 @@ MAPPING INTELLIGENCE:
 - 'Name' is the primary product/service name.
 - 'Item_Online_DisplayName' should usually match 'Name' unless a specific online name is found.
 - 'Attributes' should contain any extra details like SKU, weight, or technical specs. Make sure to assign proper attributes to the items, specifically ensuring 'veg', 'non-veg', and 'egg' attributes are included.
+- If you add an attribute, include only ONE attribute value in the Attributes column.
 - 'Goods_Services' MUST always be "Services". Always put "Services" in this column for every item.
 - 'Short_Code' and 'Short_Code_2': Make sure that do not make any changes in the existing code.
 - If dietary terms (Veg, Non-Veg, Chicken, Paneer, Prawns, Egg, etc.) are given as options/variations, prefix the Name with that term (e.g., "Veg Manchurian", "Chicken Momos"). Do not reorder existing names unless adding that prefix.
@@ -237,7 +239,9 @@ export async function extractDataFromFiles(files: File[], options: ExtractOption
       const parsed = JSON.parse(response.text || "[]");
       const normalizedRows = (Array.isArray(parsed) ? parsed : []).map((row: any) =>
         COLUMNS.reduce((acc, col) => {
-          acc[col] = row?.[col] != null ? String(row[col]) : "";
+          const rawValue = row?.[col] != null ? String(row[col]) : "";
+          acc[col] =
+            col === "Attributes" ? normalizeSingleAttribute(rawValue) : rawValue;
           return acc;
         }, {} as ExtractedRow)
       );
@@ -398,6 +402,20 @@ function splitSlashText(value: string): string[] {
     .split(/\s*\/\s*/g)
     .map((part) => part.trim())
     .filter(Boolean);
+}
+
+function normalizeSingleAttribute(value: string): string {
+  const text = String(value || "").trim();
+  if (!text) {
+    return "";
+  }
+
+  const parts = text
+    .split(/[,/|;]+/g)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  return parts.length ? parts[0] : text;
 }
 
 interface CachedRowsPayload {
