@@ -96,6 +96,18 @@ const LANGUAGE_INSTRUCTIONS: Record<ExtractionLanguage, string> = {
     "Prioritize Spanish text. Keep original Spanish wording and avoid translation where possible.",
 };
 
+const DIETARY_PREFIXES = [
+  "veg",
+  "non-veg",
+  "egg",
+  "chicken",
+  "paneer",
+  "prawns",
+  "fish",
+  "mutton",
+  "soya",
+];
+
 function buildExtractionPrompt(options: ExtractOptions) {
   if (options.outputMode === "original") {
     return `Extract all line items from this document into JSON rows using the exact column list below.
@@ -123,6 +135,11 @@ ORIGINAL OUTPUT MODE:
 - Do not create synthetic parent/child rows unless that structure is explicitly shown in the source.
 - Keep each extracted source line as close as possible in Description.
 - If a field is missing, return an empty string.
+- Make sure to assign proper attributes to the items, specifically ensuring 'veg', 'non-veg', and 'egg' attributes are added.
+- If you add an attribute, include only ONE attribute value in the Attributes column.
+- Always put 'Services' in the Goods_Services column for all items.
+- Make sure that do not make any changes in the existing code (Short_Code / Short_Code_2).
+- If dietary terms (Veg, Non-Veg, Chicken, Paneer, Prawns, Egg, etc.) are given as options/variations, prefix the Name with that term (e.g., "Veg Manchurian", "Chicken Momos"). Do not reorder existing names unless adding that prefix.
 - Output only a valid JSON array.`;
   }
 
@@ -170,8 +187,11 @@ ORDERING RULE:
 MAPPING INTELLIGENCE:
 - 'Name' is the primary product/service name.
 - 'Item_Online_DisplayName' should usually match 'Name' unless a specific online name is found.
-- 'Attributes' should contain any extra details like SKU, weight, or technical specs.
-- 'Goods_Services' should be "Goods" or "Services".
+- 'Attributes' should contain any extra details like SKU, weight, or technical specs. Make sure to assign proper attributes to the items, specifically ensuring 'veg', 'non-veg', and 'egg' attributes are included.
+- If you add an attribute, include only ONE attribute value in the Attributes column.
+- 'Goods_Services' MUST always be "Services". Always put "Services" in this column for every item.
+- 'Short_Code' and 'Short_Code_2': Make sure that do not make any changes in the existing code.
+- If dietary terms (Veg, Non-Veg, Chicken, Paneer, Prawns, Egg, etc.) are given as options/variations, prefix the Name with that term (e.g., "Veg Manchurian", "Chicken Momos"). Do not reorder existing names unless adding that prefix.
 - Output only a valid JSON array.`;
 }
 
@@ -219,13 +239,15 @@ export async function extractDataFromFiles(files: File[], options: ExtractOption
       const parsed = JSON.parse(response.text || "[]");
       const normalizedRows = (Array.isArray(parsed) ? parsed : []).map((row: any) =>
         COLUMNS.reduce((acc, col) => {
-          acc[col] = row?.[col] != null ? String(row[col]) : "";
+          const rawValue = row?.[col] != null ? String(row[col]) : "";
+          acc[col] =
+            col === "Attributes" ? normalizeSingleAttribute(rawValue) : rawValue;
           return acc;
         }, {} as ExtractedRow)
       );
       const finalRows =
         options.outputMode === "structured"
-          ? expandSlashSeparatedRows(normalizedRows)
+          ? ensureDietaryPrefixAtStart(expandSlashSeparatedRows(normalizedRows))
           : normalizedRows;
       writeCache(cacheKey, finalRows);
       results.push(...finalRows);
@@ -304,6 +326,42 @@ function expandSlashSeparatedRows(rows: ExtractedRow[]): ExtractedRow[] {
   return expanded;
 }
 
+function ensureDietaryPrefixAtStart(rows: ExtractedRow[]): ExtractedRow[] {
+  return rows.map((row) => {
+    const dietaryPrefix = normalizeDietaryPrefix(row.Variation_Name);
+    if (!dietaryPrefix) {
+      return row;
+    }
+
+    const name = String(row.Name || "").trim();
+    if (!name) {
+      return row;
+    }
+
+    if (name.toLowerCase().startsWith(`${dietaryPrefix.toLowerCase()} `)) {
+      return row;
+    }
+
+    return {
+      ...row,
+      Name: `${dietaryPrefix} ${name}`.trim(),
+      Item_Online_DisplayName: `${dietaryPrefix} ${row.Item_Online_DisplayName || name}`.trim(),
+    };
+  });
+}
+
+function normalizeDietaryPrefix(value: string): string | null {
+  const token = String(value || "").trim().toLowerCase();
+  if (!token) {
+    return null;
+  }
+  return DIETARY_PREFIXES.includes(token) ? capitalizeWord(token) : null;
+}
+
+function capitalizeWord(value: string): string {
+  return value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
+}
+
 function splitSlashPrices(price: string): string[] {
   const parts = String(price || "")
     .split("/")
@@ -344,6 +402,20 @@ function splitSlashText(value: string): string[] {
     .split(/\s*\/\s*/g)
     .map((part) => part.trim())
     .filter(Boolean);
+}
+
+function normalizeSingleAttribute(value: string): string {
+  const text = String(value || "").trim();
+  if (!text) {
+    return "";
+  }
+
+  const parts = text
+    .split(/[,/|;]+/g)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  return parts.length ? parts[0] : text;
 }
 
 interface CachedRowsPayload {

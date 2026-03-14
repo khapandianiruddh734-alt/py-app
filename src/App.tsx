@@ -15,7 +15,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import Papa from "papaparse";
+import * as XLSX from "xlsx";
 import { extractDataFromFiles, type ExtractionLanguage, type OutputMode } from "./services/geminiService";
 import { cn } from "./lib/utils";
 import {
@@ -346,24 +346,19 @@ export default function App() {
     }
   };
 
-  const downloadCSV = () => {
+  const downloadExcel = () => {
     const orderedRows = data.map((row) =>
       COLUMNS.reduce((acc, col) => {
         acc[col] = row[col] || "";
         return acc;
       }, {} as ExtractedData)
     );
-    const csv = Papa.unparse(orderedRows, { columns: COLUMNS as string[] });
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
+    const worksheet = XLSX.utils.json_to_sheet(orderedRows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Extracted Data");
+
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `extracted_data_${timestamp}.csv`);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    XLSX.writeFile(workbook, `extracted_data_${timestamp}.xlsx`);
   };
 
   const clearAll = () => {
@@ -610,11 +605,11 @@ export default function App() {
                 <h2 className="text-sm font-semibold">Extracted Data ({data.length} items)</h2>
               </div>
               <button
-                onClick={downloadCSV}
+                onClick={downloadExcel}
                 className="flex items-center gap-2 px-4 py-2 bg-white border border-zinc-200 hover:border-blue-500 hover:text-blue-600 rounded-lg text-xs font-medium transition-all shadow-sm"
               >
                 <Download size={14} />
-                Download CSV
+                Download Excel
               </button>
             </div>
 
