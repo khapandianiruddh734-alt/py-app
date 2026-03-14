@@ -1,0 +1,5 @@
+{
+  "name": "DocuExtract AI",
+  "description": "Intelligent document data extractor for images and PDFs. Extracts structured data into a standardized 11-column format using Gemini AI.",
+  "requestFramePermissions": []
+}

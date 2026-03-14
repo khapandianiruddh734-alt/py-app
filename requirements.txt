@@ -1,0 +1,4 @@
+pytesseract
+pdfplumber
+pandas
+Pillow
