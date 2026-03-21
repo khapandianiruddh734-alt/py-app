@@ -300,6 +300,9 @@ export default function App() {
     accept: {
       "image/*": [".jpeg", ".jpg", ".png"],
       "application/pdf": [".pdf"],
+      "text/csv": [".csv"],
+      "application/vnd.ms-excel": [".xls"],
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
     },
   } as any);
 
@@ -427,7 +430,9 @@ export default function App() {
               <Upload className="text-zinc-400" size={48} strokeWidth={1.5} />
               <div className="space-y-1">
                 <p className="text-sm font-medium text-zinc-600">Upload Client New Menu</p>
-                <p className="text-xs text-zinc-400">Drop your files here or click to browse</p>
+                <p className="text-xs text-zinc-400">
+                  Drop files here or click to browse (PDF, images, XLS/XLSX, CSV)
+                </p>
               </div>
             </div>
 
@@ -449,7 +454,7 @@ export default function App() {
 
             <div className="mt-6 w-full max-w-2xl grid grid-cols-1 md:grid-cols-2 gap-3">
               <label className="text-xs font-medium text-zinc-600">
-                OCR / Language
+                OCR / Output Language
                 <select
                   value={language}
                   onChange={(e) => setLanguage(e.target.value as ExtractionLanguage)}
@@ -471,6 +476,9 @@ export default function App() {
                   <option value="french">French</option>
                   <option value="spanish">Spanish</option>
                 </select>
+                <p className="text-[11px] text-zinc-400 mt-1">
+                  Only Name & Category are translated; display names and attributes stay in the original language.
+                </p>
               </label>
 
               <label className="text-xs font-medium text-zinc-600">

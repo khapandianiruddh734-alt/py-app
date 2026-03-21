@@ -1,4 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
+import * as XLSX from "xlsx";
 
 const COLUMNS = [
   "Name",
@@ -65,35 +66,35 @@ interface ExtractOptions {
 
 const LANGUAGE_INSTRUCTIONS: Record<ExtractionLanguage, string> = {
   auto:
-    "Detect the source language automatically. Do not translate item text unless required for readability in target columns.",
+    "Detect the source language automatically. Translate only when needed per translation rules; otherwise keep source text.",
   english:
-    "Prioritize English text if multilingual content exists. Keep original wording and transliterate only when the source has no English form.",
+    "Use English as the target for fields that need translation per translation rules; keep other fields in their source script.",
   hindi:
-    "Prioritize Hindi (Devanagari) text. Keep Hindi spelling as the source language when available.",
+    "Use Hindi (Devanagari) as the target for fields that need translation per translation rules; keep other fields in their source script.",
   arabic:
-    "Prioritize Arabic text. Keep Arabic spelling as the source language when available.",
+    "Use Arabic as the target for fields that need translation per translation rules; keep other fields in their source script.",
   urdu:
-    "Prioritize Urdu text. Keep Urdu spelling as the source language when available.",
+    "Use Urdu script as the target for fields that need translation per translation rules; keep other fields in their source script.",
   bengali:
-    "Prioritize Bengali text. Keep Bengali spelling as the source language when available.",
+    "Use Bengali script as the target for fields that need translation per translation rules; keep other fields in their source script.",
   tamil:
-    "Prioritize Tamil text. Keep Tamil spelling as the source language when available.",
+    "Use Tamil script as the target for fields that need translation per translation rules; keep other fields in their source script.",
   telugu:
-    "Prioritize Telugu text. Keep Telugu spelling as the source language when available.",
+    "Use Telugu script as the target for fields that need translation per translation rules; keep other fields in their source script.",
   marathi:
-    "Prioritize Marathi text. Keep Marathi spelling as the source language when available.",
+    "Use Marathi (Devanagari) as the target for fields that need translation per translation rules; keep other fields in their source script.",
   gujarati:
-    "Prioritize Gujarati text. Keep Gujarati spelling as the source language when available.",
+    "Use Gujarati script as the target for fields that need translation per translation rules; keep other fields in their source script.",
   punjabi:
-    "Prioritize Punjabi text. Keep Punjabi spelling as the source language when available.",
+    "Use Punjabi (Gurmukhi) as the target for fields that need translation per translation rules; keep other fields in their source script.",
   malayalam:
-    "Prioritize Malayalam text. Keep Malayalam spelling as the source language when available.",
+    "Use Malayalam script as the target for fields that need translation per translation rules; keep other fields in their source script.",
   kannada:
-    "Prioritize Kannada text. Keep Kannada spelling as the source language when available.",
+    "Use Kannada script as the target for fields that need translation per translation rules; keep other fields in their source script.",
   french:
-    "Prioritize French text. Keep original French wording and avoid translation where possible.",
+    "Use French as the target for fields that need translation per translation rules; keep other fields in their source script.",
   spanish:
-    "Prioritize Spanish text. Keep original Spanish wording and avoid translation where possible.",
+    "Use Spanish as the target for fields that need translation per translation rules; keep other fields in their source script.",
 };
 
 const DIETARY_PREFIXES = [
@@ -128,6 +129,12 @@ STRICT COLUMN FORMAT:
 LANGUAGE MODE:
 - ${LANGUAGE_INSTRUCTIONS[options.language]}
 
+TRANSLATION RULES:
+- Translate only Name and Category into the selected output language when the source differs.
+- Keep Item_Online_DisplayName, Variation_Name, Category_Online_DisplayName, Description, and Attributes in their original language (no translation). Preserve formatting and casing.
+- Keep Short_Code, Short_Code_2, numeric values, and Goods_Services exactly as in source (Goods_Services must stay "Services").
+- Preserve brand names or product codes in their original script if translation would reduce clarity.
+
 ORIGINAL OUTPUT MODE:
 - Preserve original source order exactly.
 - Preserve original text formatting, spelling, punctuation, and casing.
@@ -160,6 +167,12 @@ STRICT COLUMN FORMAT:
 
 LANGUAGE MODE:
 - ${LANGUAGE_INSTRUCTIONS[options.language]}
+
+TRANSLATION RULES:
+- Translate only Name and Category into the selected output language when the source differs.
+- Keep Item_Online_DisplayName, Variation_Name, Category_Online_DisplayName, Description, and Attributes in their original language (no translation). Preserve formatting and casing.
+- Keep Short_Code, Short_Code_2, numeric values, and Goods_Services exactly as in source (Goods_Services must stay "Services").
+- Preserve brand names or product codes in their original script if translation would reduce clarity.
 
 VARIATION HANDLING RULES:
 1. If an item has portion sizes (e.g., "Half", "Full") or standard variations (e.g., "Small", "Large", "Red"):
@@ -209,24 +222,31 @@ export async function extractDataFromFiles(files: File[], options: ExtractOption
       continue;
     }
 
-    const base64Data = await fileToBase64(file);
-    const mimeType = file.type;
-
+    const isSheet = isSpreadsheetFile(file);
     const response = await ai.models.generateContent({
       model,
       contents: [
         {
-          parts: [
-            {
-              inlineData: {
-                data: base64Data.split(",")[1],
-                mimeType: mimeType,
-              },
-            },
-            {
-              text: buildExtractionPrompt(options),
-            },
-          ],
+          parts: isSheet
+            ? [
+                {
+                  text: await buildSpreadsheetPayload(file),
+                },
+                {
+                  text: buildExtractionPrompt(options),
+                },
+              ]
+            : [
+                {
+                  inlineData: {
+                    data: (await fileToBase64(file)).split(",")[1],
+                    mimeType: normalizeMimeType(file),
+                  },
+                },
+                {
+                  text: buildExtractionPrompt(options),
+                },
+              ],
         },
       ],
       config: {
@@ -266,6 +286,57 @@ function fileToBase64(file: File): Promise<string> {
     reader.onload = () => resolve(reader.result as string);
     reader.onerror = (error) => reject(error);
   });
+}
+
+function normalizeMimeType(file: File): string {
+  if (file.type) {
+    return file.type;
+  }
+  const ext = getFileExtension(file.name);
+  if (ext === "csv") {
+    return "text/csv";
+  }
+  if (ext === "xls") {
+    return "application/vnd.ms-excel";
+  }
+  if (ext === "xlsx") {
+    return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  }
+  return "application/octet-stream";
+}
+
+function getFileExtension(name: string): string {
+  const parts = String(name || "").toLowerCase().split(".");
+  return parts.length > 1 ? parts[parts.length - 1] : "";
+}
+
+function isSpreadsheetFile(file: File): boolean {
+  const ext = getFileExtension(file.name);
+  if (ext === "csv" || ext === "xls" || ext === "xlsx") {
+    return true;
+  }
+  return (
+    file.type === "text/csv" ||
+    file.type === "application/vnd.ms-excel" ||
+    file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  );
+}
+
+async function buildSpreadsheetPayload(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer();
+  const workbook = XLSX.read(buffer, { type: "array" });
+  const sheetNames = workbook.SheetNames || [];
+  if (sheetNames.length === 0) {
+    return "SOURCE CSV:\n";
+  }
+
+  const segments = sheetNames.map((sheetName) => {
+    const sheet = workbook.Sheets[sheetName];
+    const csv = XLSX.utils.sheet_to_csv(sheet, { FS: ",", RS: "\n" });
+    return `--- Sheet: ${sheetName} ---\n${csv}`;
+  });
+
+  return `SOURCE CSV:\n${segments.join("\n\n")}`;
 }
 
 function expandSlashSeparatedRows(rows: ExtractedRow[]): ExtractedRow[] {
