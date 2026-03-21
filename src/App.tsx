@@ -477,7 +477,7 @@ export default function App() {
                   <option value="spanish">Spanish</option>
                 </select>
                 <p className="text-[11px] text-zinc-400 mt-1">
-                  Only Name & Category are translated; display names and attributes stay in the original language.
+                  Select the language for output.
                 </p>
               </label>
 
