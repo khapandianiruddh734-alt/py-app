@@ -13,56 +13,92 @@
 }
 
 .dashboard-card {
-  border: 1px solid #e4e4e7;
-  border-radius: 0.75rem;
-  padding: 0.9rem;
-  background: #fafafa;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 1rem 1.25rem;
+  background: #ffffff;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
 }
 
 .dashboard-title {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: #3f3f46;
-  margin-bottom: 0.45rem;
+  gap: 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.75rem;
+}
+
+.dashboard-title svg {
+  width: 32px;
+  height: 32px;
+  padding: 8px;
+  border-radius: 9px;
+  flex: 0 0 auto;
+  color: #2563eb;
+  background: #eff6ff;
+}
+
+.dashboard-card:nth-child(2) .dashboard-title svg {
+  color: #d97706;
+  background: #fffbeb;
+}
+
+.dashboard-card:nth-child(3) .dashboard-title svg {
+  color: #16a34a;
+  background: #f0fdf4;
+}
+
+.dashboard-card:nth-child(4) .dashboard-title svg {
+  color: #7c3aed;
+  background: #f5f3ff;
 }
 
 .dashboard-value {
   font-size: 0.9rem;
-  font-weight: 700;
-  color: #18181b;
-  margin-bottom: 0.45rem;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 0.55rem;
 }
 
 .dashboard-subtle {
   font-size: 0.73rem;
-  color: #71717a;
+  color: #6b7280;
+  line-height: 1.45;
 }
 
 .dashboard-progress {
   width: 100%;
-  height: 0.5rem;
-  background: #e4e4e7;
+  height: 5px;
+  background: #e5e7eb;
   border-radius: 9999px;
   overflow: hidden;
-  margin-bottom: 0.45rem;
+  margin-bottom: 0.55rem;
 }
 
 .dashboard-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #1d4ed8, #22c55e);
+  background: #2563eb;
   transition: width 240ms ease;
 }
 
 .dashboard-inline-stats {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem 0.8rem;
+  gap: 0.45rem 0.55rem;
   font-size: 0.72rem;
-  color: #52525b;
-  margin-bottom: 0.45rem;
+  color: #4b5563;
+  margin-bottom: 0.75rem;
+}
+
+.dashboard-inline-stats span {
+  border: 1px solid #e5e7eb;
+  border-radius: 9999px;
+  padding: 0.2rem 0.5rem;
+  background: #f9fafb;
 }
 
 .dashboard-queue-list {
@@ -80,115 +116,151 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 0.72rem;
-  color: #3f3f46;
+  color: #374151;
+  border: 1px solid #f3f4f6;
+  border-radius: 10px;
+  padding: 0.45rem 0.55rem;
+  background: #ffffff;
 }
 
 .dashboard-status {
   border-radius: 9999px;
-  padding: 0.1rem 0.45rem;
+  padding: 0.15rem 0.5rem;
   font-size: 0.65rem;
-  font-weight: 700;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .dashboard-status-queued {
   color: #1d4ed8;
-  background: #dbeafe;
+  background: #eff6ff;
 }
 
 .dashboard-status-processing {
-  color: #7c2d12;
-  background: #ffedd5;
+  color: #b45309;
+  background: #fffbeb;
 }
 
 .dashboard-status-completed {
   color: #166534;
-  background: #dcfce7;
+  background: #f0fdf4;
 }
 
 .dashboard-status-failed {
   color: #991b1b;
-  background: #fee2e2;
+  background: #fef2f2;
 }
 
 .dashboard-action-btn {
-  margin-top: 0.5rem;
-  border: 1px solid #d4d4d8;
-  border-radius: 0.5rem;
-  padding: 0.4rem 0.75rem;
-  font-size: 0.75rem;
+  margin-top: 0.75rem;
+  min-height: 40px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.78rem;
   font-weight: 600;
-  color: #27272a;
+  color: #374151;
   background: #ffffff;
+  cursor: pointer;
+  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease;
 }
 
 .dashboard-action-btn:hover {
-  border-color: #2563eb;
-  color: #1d4ed8;
+  border-color: #d1d5db;
+  color: #111827;
+  background: #f3f4f6;
+}
+
+.dashboard-action-btn:focus-visible {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px #eff6ff;
 }
 
 .dashboard-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.45);
+  background: rgba(15, 23, 42, 0.5);
   z-index: 60;
   display: grid;
   place-items: center;
   padding: 1rem;
+  backdrop-filter: blur(6px);
 }
 
 .dashboard-modal {
   width: min(640px, 100%);
   max-height: 85vh;
   overflow: hidden;
-  border-radius: 0.75rem;
-  border: 1px solid #e4e4e7;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
   background: #ffffff;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.14);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
 }
 
 .dashboard-modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #e4e4e7;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
 }
 
 .dashboard-modal-title {
   font-size: 0.95rem;
-  font-weight: 700;
-  color: #18181b;
+  font-weight: 600;
+  color: #111827;
 }
 
 .dashboard-modal-close {
-  border: 0;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 10px;
   background: transparent;
-  color: #52525b;
+  color: #6b7280;
   cursor: pointer;
+  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease;
+}
+
+.dashboard-modal-close:hover {
+  color: #111827;
+  background: #ffffff;
+  border-color: #e5e7eb;
+}
+
+.dashboard-modal-close:focus-visible {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px #eff6ff;
 }
 
 .dashboard-modal-body {
   max-height: calc(85vh - 54px);
   overflow: auto;
-  padding: 0.8rem 1rem;
+  padding: 1rem 1.25rem;
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.75rem;
 }
 
 .dashboard-file-item {
-  border: 1px solid #e4e4e7;
-  border-radius: 0.6rem;
-  padding: 0.55rem 0.7rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 0.75rem 0.85rem;
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: center;
   gap: 0.7rem;
+  background: #ffffff;
 }
 
 .dashboard-file-name {
   font-size: 0.8rem;
-  color: #18181b;
+  color: #111827;
   font-weight: 600;
 }
 
@@ -196,11 +268,26 @@
   border: 1px solid #fca5a5;
   color: #b91c1c;
   background: #fff1f2;
-  border-radius: 0.45rem;
-  padding: 0.35rem 0.55rem;
+  border-radius: 10px;
+  min-height: 36px;
+  padding: 0.45rem 0.65rem;
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
   font-size: 0.72rem;
   font-weight: 600;
+  cursor: pointer;
+  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease;
+}
+
+.dashboard-delete-btn:hover {
+  color: #991b1b;
+  background: #fee2e2;
+  border-color: #f87171;
+}
+
+.dashboard-delete-btn:focus-visible {
+  outline: none;
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px #fee2e2;
 }

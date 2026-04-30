@@ -405,44 +405,46 @@ export default function App() {
   );
 
   return (
-    <div className="min-h-screen bg-[#F0F2F5] text-[#1A1A1A] font-sans selection:bg-blue-100 py-12 px-4">
-      <div className="max-w-5xl mx-auto space-y-8">
-        <div className="bg-white rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.05)] border border-zinc-200 overflow-hidden relative">
+    <div className="min-h-screen bg-[#F5F6FA] text-gray-900 font-sans selection:bg-blue-100 py-10 px-4 sm:py-12">
+      <div className="max-w-[760px] mx-auto space-y-6">
+        <div className="bg-white rounded-[14px] shadow-[0_12px_30px_rgba(15,23,42,0.06)] border border-[#E5E7EB] overflow-hidden relative">
           <button
             onClick={clearAll}
-            className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-600 transition-colors"
+            className="absolute top-4 right-4 grid h-9 w-9 place-items-center rounded-[10px] border border-transparent text-gray-400 transition-colors duration-150 ease-in-out hover:border-gray-200 hover:bg-gray-50 hover:text-gray-700 focus:outline-none focus:ring-[3px] focus:ring-blue-50 cursor-pointer"
             title="Reset"
           >
             <RefreshCw size={18} />
           </button>
 
-          <div className="p-8 flex flex-col items-center">
-            <h1 className="text-2xl font-bold mb-8">New Menu Processing</h1>
+          <div className="p-5 sm:p-8 flex flex-col items-center">
+            <h1 className="text-2xl font-semibold mb-8 text-gray-950">New Menu Processing</h1>
 
             <div
               {...getRootProps()}
               className={cn(
-                "w-full max-w-2xl border-2 border-dashed rounded-xl p-12 transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-4",
-                isDragActive ? "border-blue-500 bg-blue-50/30" : "border-zinc-200 hover:border-zinc-300 bg-white"
+                "w-full border-2 border-dashed rounded-[14px] p-8 sm:p-12 transition-colors duration-150 ease-in-out cursor-pointer flex flex-col items-center justify-center text-center gap-4",
+                isDragActive ? "border-blue-500 bg-blue-50" : "border-gray-300 bg-white hover:border-blue-500 hover:bg-blue-50"
               )}
             >
               <input {...getInputProps()} />
-              <Upload className="text-zinc-400" size={48} strokeWidth={1.5} />
+              <div className="grid h-14 w-14 place-items-center rounded-[14px] bg-blue-50 text-blue-600 ring-1 ring-blue-100">
+                <Upload size={30} strokeWidth={1.7} />
+              </div>
               <div className="space-y-1">
-                <p className="text-sm font-medium text-zinc-600">Upload Client New Menu</p>
-                <p className="text-xs text-zinc-400">
+                <p className="text-sm font-semibold text-gray-800">Upload Client New Menu</p>
+                <p className="text-xs text-gray-500">
                   Drop files here or click to browse (PDF, images, XLS/XLSX, CSV)
                 </p>
               </div>
             </div>
 
             {files.length > 0 && (
-              <div className="mt-4 w-full max-w-2xl">
+              <div className="mt-4 w-full">
                 <div className="flex flex-wrap gap-2 justify-center">
                   {files.map((file, i) => (
                     <div
                       key={i}
-                      className="flex items-center gap-2 px-3 py-1.5 bg-zinc-100 rounded-full text-[10px] font-medium text-zinc-600 border border-zinc-200"
+                      className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-full text-[11px] font-medium text-gray-600 border border-gray-200"
                     >
                       <FileText size={12} />
                       {file.name}
@@ -452,13 +454,13 @@ export default function App() {
               </div>
             )}
 
-            <div className="mt-6 w-full max-w-2xl grid grid-cols-1 md:grid-cols-2 gap-3">
-              <label className="text-xs font-medium text-zinc-600">
+            <div className="mt-6 w-full grid grid-cols-1 md:grid-cols-2 gap-3">
+              <label className="text-[11px] font-medium uppercase tracking-[0.05em] text-gray-500">
                 OCR / Output Language
                 <select
                   value={language}
                   onChange={(e) => setLanguage(e.target.value as ExtractionLanguage)}
-                  className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  className="mt-1.5 h-10 w-full rounded-[10px] border border-[#E5E7EB] bg-white px-3 text-sm font-normal normal-case tracking-normal text-gray-700 transition-colors duration-150 ease-in-out focus:border-blue-500 focus:outline-none focus:ring-[3px] focus:ring-blue-50"
                 >
                   <option value="auto">Auto Detect</option>
                   <option value="english">English</option>
@@ -476,17 +478,17 @@ export default function App() {
                   <option value="french">French</option>
                   <option value="spanish">Spanish</option>
                 </select>
-                <p className="text-[11px] text-zinc-400 mt-1">
+                <p className="text-[11px] normal-case tracking-normal text-gray-500 mt-1.5">
                   Select the language for output.
                 </p>
               </label>
 
-              <label className="text-xs font-medium text-zinc-600">
+              <label className="text-[11px] font-medium uppercase tracking-[0.05em] text-gray-500">
                 Output Format
                 <select
                   value={outputMode}
                   onChange={(e) => setOutputMode(e.target.value as OutputMode)}
-                  className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  className="mt-1.5 h-10 w-full rounded-[10px] border border-[#E5E7EB] bg-white px-3 text-sm font-normal normal-case tracking-normal text-gray-700 transition-colors duration-150 ease-in-out focus:border-blue-500 focus:outline-none focus:ring-[3px] focus:ring-blue-50"
                 >
                   <option value="structured">Structured</option>
                   <option value="original">Original</option>
@@ -494,7 +496,7 @@ export default function App() {
               </label>
             </div>
 
-            <div className="dashboard-grid mt-6 w-full max-w-4xl">
+            <div className="dashboard-grid mt-6 w-full">
               <section className="dashboard-card">
                 <div className="dashboard-title">
                   <HardDrive size={16} />
@@ -509,7 +511,7 @@ export default function App() {
                 <p
                   className={cn(
                     "dashboard-subtle",
-                    dashboard.isStorageWarning ? "text-red-600" : "text-zinc-500"
+                    dashboard.isStorageWarning ? "text-red-600" : "text-gray-500"
                   )}
                 >
                   {dashboard.isStorageWarning
@@ -572,11 +574,11 @@ export default function App() {
               </section>
             </div>
 
-            <div className="mt-10">
+            <div className="mt-8">
               <button
                 onClick={handleExtract}
                 disabled={isExtracting || files.length === 0}
-                className="px-10 py-3 bg-[#9BA3AF] hover:bg-[#868E99] disabled:opacity-50 text-white rounded-lg font-semibold transition-all shadow-sm"
+                className="min-h-10 px-10 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none disabled:cursor-not-allowed text-white rounded-[12px] text-sm font-semibold transition-colors duration-150 ease-in-out shadow-[0_8px_18px_rgba(37,99,235,0.22)] cursor-pointer focus:outline-none focus:ring-[3px] focus:ring-blue-50"
               >
                 {isExtracting ? (
                   <div className="flex items-center gap-2">
@@ -592,29 +594,29 @@ export default function App() {
         </div>
 
         {notice && (
-          <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex items-center justify-center gap-3 text-amber-700 text-sm">
+          <div className="bg-amber-50 border border-amber-200 p-4 rounded-[14px] flex items-center justify-center gap-3 text-amber-700 text-sm shadow-sm">
             <AlertCircle size={18} />
             {notice}
           </div>
         )}
 
         {error && (
-          <div className="bg-red-50 border border-red-100 p-4 rounded-xl flex items-center justify-center gap-3 text-red-600 text-sm">
+          <div className="bg-red-50 border border-red-200 p-4 rounded-[14px] flex items-center justify-center gap-3 text-red-600 text-sm shadow-sm">
             <AlertCircle size={18} />
             {error}
           </div>
         )}
 
         {data.length > 0 && (
-          <div className="bg-white rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.05)] border border-zinc-200 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/30">
+          <div className="bg-white rounded-[14px] shadow-[0_12px_30px_rgba(15,23,42,0.06)] border border-[#E5E7EB] overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="px-5 sm:px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
               <div className="flex items-center gap-2">
-                <TableIcon size={18} className="text-zinc-400" />
-                <h2 className="text-sm font-semibold">Extracted Data ({data.length} items)</h2>
+                <TableIcon size={18} className="text-blue-600" />
+                <h2 className="text-sm font-semibold text-gray-900">Extracted Data ({data.length} items)</h2>
               </div>
               <button
                 onClick={downloadExcel}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-zinc-200 hover:border-blue-500 hover:text-blue-600 rounded-lg text-xs font-medium transition-all shadow-sm"
+                className="flex min-h-10 items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 hover:border-blue-500 hover:text-blue-600 rounded-[10px] text-xs font-semibold transition-colors duration-150 ease-in-out shadow-sm cursor-pointer focus:outline-none focus:ring-[3px] focus:ring-blue-50"
               >
                 <Download size={14} />
                 Download Excel
@@ -624,24 +626,24 @@ export default function App() {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-zinc-50/50 border-b border-zinc-100">
+                  <tr className="bg-gray-50 border-b border-gray-100">
                     {COLUMNS.map((col) => (
                       <th
                         key={col}
-                        className="px-4 py-3 text-[10px] font-bold text-zinc-400 uppercase tracking-wider whitespace-nowrap"
+                        className="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-[0.05em] whitespace-nowrap"
                       >
                         {col}
                       </th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-100">
+                <tbody className="divide-y divide-gray-100">
                   {data.map((row, i) => (
-                    <tr key={i} className="hover:bg-zinc-50/30 transition-colors">
+                    <tr key={i} className="hover:bg-blue-50/40 transition-colors duration-150 ease-in-out">
                       {COLUMNS.map((col) => (
                         <td
                           key={col}
-                          className="px-4 py-3 text-xs text-zinc-600 whitespace-nowrap max-w-[200px] truncate"
+                          className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap max-w-[200px] truncate"
                         >
                           {row[col as keyof ExtractedData] || ""}
                         </td>
