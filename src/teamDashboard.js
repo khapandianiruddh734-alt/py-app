@@ -1,4 +1,4 @@
-export const MAX_FILES_PER_USER = 10;
+export const MAX_FILES_PER_USER = 50;
 
 export function statusLabel(status) {
   switch (status) {
