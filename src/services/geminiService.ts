@@ -34,7 +34,7 @@ export type ExtractionLanguage =
   | "spanish";
 export type OutputMode = "structured" | "original";
 
-const CACHE_PREFIX = "docuextract:rows:v1";
+const CACHE_PREFIX = "docuextract:rows:v3";
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
 const memoryCache = new Map<string, ExtractedRow[]>();
 
@@ -146,6 +146,7 @@ ORIGINAL OUTPUT MODE:
 - If you add an attribute, include only ONE attribute value in the Attributes column.
 - Always put 'Services' in the Goods_Services column for all items.
 - Make sure that do not make any changes in the existing code (Short_Code / Short_Code_2).
+- If the source shows MRP or APS instead of an actual item price, set 'Price' to "0".
 - If dietary terms (Veg, Non-Veg, Chicken, Paneer, Prawns, Egg, etc.) are given as options/variations, prefix the Name with that term (e.g., "Veg Manchurian", "Chicken Momos"). Do not reorder existing names unless adding that prefix.
 - Output only a valid JSON array.`;
   }
@@ -180,12 +181,15 @@ VARIATION HANDLING RULES:
    - For the PARENT row: Set 'Price' to "0", 'Variation_Name' to empty, and 'Name' to the base product name.
    - Then create CHILD rows for each variation immediately below the parent.
    - For CHILD rows: Set 'Name' to the base product name, 'Variation_Name' to the specific variation (e.g., "Half", "Full"), and 'Price' to the actual price.
+   - Only use this parent/child structure when the same item has TWO OR MORE explicit size/variation prices.
+   - If there is only ONE size/variation column or one price for an item (for example a single "M" column with price 79), create only ONE standalone row with the actual price and leave 'Variation_Name' empty.
 2. SPECIAL RULE FOR DIETARY/PROTEIN OPTIONS (Veg, Non-Veg, Egg, Chicken, Paneer, Soya, etc.):
    - DO NOT create a parent-child variation structure for these categories themselves.
    - Instead, include the dietary type in the standalone 'Name'.
    - If these standalone items have portion sizes (Half/Full), then apply Rule 1 to that specific item.
    - Example: "Veg Steam Momos" (Parent, Price 0) -> "Veg Steam Momos" (Child, Variation: Half, Price: 60) -> "Veg Steam Momos" (Child, Variation: Full, Price: 100).
 3. If an item has no variations, just create a single row with its actual price.
+   - A single visible size label by itself is not enough to create a variation row.
 4. If a product line contains "/" between item names (example: "Cheese / Kashmiri Naan"):
    - Split into separate rows for each item name.
    - If prices are also slash-separated (example: "120/160"), map each price to the matching item in order.
@@ -204,6 +208,7 @@ MAPPING INTELLIGENCE:
 - If you add an attribute, include only ONE attribute value in the Attributes column.
 - 'Goods_Services' MUST always be "Services". Always put "Services" in this column for every item.
 - 'Short_Code' and 'Short_Code_2': Make sure that do not make any changes in the existing code.
+- If the source shows MRP or APS instead of an actual item price, set 'Price' to "0".
 - If dietary terms (Veg, Non-Veg, Chicken, Paneer, Prawns, Egg, etc.) are given as options/variations, prefix the Name with that term (e.g., "Veg Manchurian", "Chicken Momos"). Do not reorder existing names unless adding that prefix.
 - Output only a valid JSON array.`;
 }
@@ -261,13 +266,17 @@ export async function extractDataFromFiles(files: File[], options: ExtractOption
         COLUMNS.reduce((acc, col) => {
           const rawValue = row?.[col] != null ? String(row[col]) : "";
           acc[col] =
-            col === "Attributes" ? normalizeSingleAttribute(rawValue) : rawValue;
+            col === "Attributes"
+              ? normalizeSingleAttribute(rawValue)
+              : col === "Price"
+                ? normalizePrice(rawValue)
+                : rawValue;
           return acc;
         }, {} as ExtractedRow)
       );
       const finalRows =
         options.outputMode === "structured"
-          ? ensureDietaryPrefixAtStart(expandSlashSeparatedRows(normalizedRows))
+          ? ensureDietaryPrefixAtStart(collapseSingleVariationGroups(expandSlashSeparatedRows(normalizedRows)))
           : normalizedRows;
       writeCache(cacheKey, finalRows);
       results.push(...finalRows);
@@ -337,6 +346,74 @@ async function buildSpreadsheetPayload(file: File): Promise<string> {
   });
 
   return `SOURCE CSV:\n${segments.join("\n\n")}`;
+}
+
+function collapseSingleVariationGroups(rows: ExtractedRow[]): ExtractedRow[] {
+  const collapsed: ExtractedRow[] = [];
+
+  for (let index = 0; index < rows.length; index += 1) {
+    const row = rows[index];
+    const next = rows[index + 1];
+
+    if (
+      next &&
+      isZeroPrice(row.Price) &&
+      !String(row.Variation_Name || "").trim() &&
+      sameText(row.Name, next.Name) &&
+      hasActualPrice(next.Price) &&
+      countFollowingChildren(rows, index) === 1
+    ) {
+      collapsed.push({
+        ...next,
+        Variation_Name: "",
+      });
+      index += 1;
+      continue;
+    }
+
+    collapsed.push(row);
+  }
+
+  return collapsed;
+}
+
+function countFollowingChildren(rows: ExtractedRow[], parentIndex: number): number {
+  const parent = rows[parentIndex];
+  let count = 0;
+
+  for (let index = parentIndex + 1; index < rows.length; index += 1) {
+    const row = rows[index];
+    if (!sameText(parent.Name, row.Name)) {
+      break;
+    }
+    if (isZeroPrice(row.Price) && !String(row.Variation_Name || "").trim()) {
+      break;
+    }
+    count += 1;
+  }
+
+  return count;
+}
+
+function sameText(left: string, right: string): boolean {
+  return String(left || "").trim().toLowerCase() === String(right || "").trim().toLowerCase();
+}
+
+function isZeroPrice(price: string): boolean {
+  return /^0(?:\.0+)?$/.test(String(price || "").trim());
+}
+
+function hasActualPrice(price: string): boolean {
+  const text = String(price || "").trim();
+  return Boolean(text) && !isZeroPrice(text);
+}
+
+function normalizePrice(value: string): string {
+  const text = String(value || "").trim();
+  if (/\b(?:MRP|APS)\b/i.test(text)) {
+    return "0";
+  }
+  return text;
 }
 
 function expandSlashSeparatedRows(rows: ExtractedRow[]): ExtractedRow[] {

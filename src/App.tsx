@@ -144,6 +144,7 @@ export default function App() {
   const userIdRef = useRef<string>(resolveCurrentUserId());
   const queueRef = useRef<any>(null);
   const storageMonitorRef = useRef<any>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   const dashboard = useMemo(
     () =>
@@ -176,6 +177,61 @@ export default function App() {
     }
   }, []);
 
+  const getAudioContext = useCallback(() => {
+    if (typeof window === "undefined") return null;
+    const AudioContextConstructor =
+      window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+
+    if (!AudioContextConstructor) return null;
+
+    if (!audioContextRef.current) {
+      audioContextRef.current = new AudioContextConstructor();
+    }
+
+    return audioContextRef.current;
+  }, []);
+
+  const unlockReadyBeep = useCallback(() => {
+    const audioContext = getAudioContext();
+    if (audioContext?.state === "suspended") {
+      void audioContext.resume();
+    }
+  }, [getAudioContext]);
+
+  const playReadyBeep = useCallback(() => {
+    const audioContext = getAudioContext();
+    if (!audioContext) return;
+
+    const playTone = (frequency: number, startTime: number, duration: number, peakVolume: number) => {
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+
+      oscillator.type = "triangle";
+      oscillator.frequency.setValueAtTime(frequency, startTime);
+      gain.gain.setValueAtTime(0.001, startTime);
+      gain.gain.exponentialRampToValueAtTime(peakVolume, startTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+      oscillator.start(startTime);
+      oscillator.stop(startTime + duration + 0.03);
+    };
+
+    const play = () => {
+      const now = audioContext.currentTime;
+      playTone(659.25, now, 0.16, 0.12);
+      playTone(987.77, now + 0.13, 0.24, 0.1);
+    };
+
+    if (audioContext.state === "suspended") {
+      void audioContext.resume().then(play).catch(() => {});
+      return;
+    }
+
+    play();
+  }, [getAudioContext]);
+
   const handleTaskUpdate = useCallback((task: any) => {
     setTaskViews((prev) => ({
       ...prev,
@@ -190,12 +246,16 @@ export default function App() {
       },
     }));
 
+    if (task.status === "completed") {
+      playReadyBeep();
+    }
+
     void updateFileRecord(task.fileRecordId, {
       status: task.status,
       retries: task.retries || 0,
       error: task.error || "",
     });
-  }, []);
+  }, [playReadyBeep]);
 
   const handleQueueSnapshot = useCallback((snapshot: QueueSnapshot) => {
     setQueueSnapshot(snapshot);
@@ -309,6 +369,7 @@ export default function App() {
   const handleExtract = async () => {
     if (files.length === 0) return;
 
+    unlockReadyBeep();
     setError(null);
     setNotice(null);
 
